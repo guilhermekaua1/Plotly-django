@@ -1,6 +1,15 @@
-echo "venv/
+# Django
+*.sqlite3
 *.pyc
 __pycache__/
-.vscode/
 .env
-db.sqlite3" > .gitignore
+
+# Virtual Environment
+venv/
+
+# IDE
+.vscode/
+.idea/
+
+# System
+.DS_Store
