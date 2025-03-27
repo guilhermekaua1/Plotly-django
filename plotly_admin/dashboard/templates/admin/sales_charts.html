@@ -1,0 +1,18 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block content %}
+<h1>Análise de Vendas</h1>
+
+<div style="display: flex; flex-wrap: wrap; gap: 20px;">
+    <div style="flex: 1; min-width: 400px;">
+        {{ fig1|safe }}
+    </div>
+    <div style="flex: 1; min-width: 400px;">
+        {{ fig2|safe }}
+    </div>
+    <div style="flex: 100%; min-width: 800px;">
+        {{ fig3|safe }}
+    </div>
+</div>
+{% endblock %}

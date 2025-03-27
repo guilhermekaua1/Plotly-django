@@ -1,0 +1,168 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrahead %}
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+    .filter-box {
+        background: #f8f8f8;
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 4px;
+    }
+    .dashboard-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-top: 20px;
+    }
+    .select2 {
+        width: 200px !important;
+        margin-right: 15px;
+    }
+    #data-table {
+        margin-top: 20px;
+        overflow-x: auto;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    th, td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+    }
+    th {
+        background-color: #f2f2f2;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="filter-box">
+    <h3>Filtros Dinâmicos</h3>
+    <div>
+        <label>Produto:</label>
+        <select id="product-filter" multiple>
+            {% for product in products %}
+                <option value="{{ product }}">{{ product }}</option>
+            {% endfor %}
+        </select>
+        
+        <label>Região:</label>
+        <select id="region-filter" multiple>
+            {% for region in regions %}
+                <option value="{{ region }}">{{ region }}</option>
+            {% endfor %}
+        </select>
+        
+        <button id="apply-filters" class="button">Aplicar Filtros</button>
+    </div>
+</div>
+
+<div class="dashboard-container">
+    <div id="products-chart"></div>
+    <div id="regions-chart"></div>
+    <div style="grid-column: span 2;">
+        <h3>Tabela de Dados</h3>
+        <div id="data-table"></div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    // Inicializa Select2 para filtros múltiplos
+    $('#product-filter, #region-filter').select2({
+        placeholder: "Selecione...",
+        allowClear: true
+    });
+
+    // Carrega dados iniciais
+    loadData();
+    
+    // Aplica filtros ao clicar no botão
+    $('#apply-filters').click(function() {
+        loadData();
+    });
+
+    function loadData() {
+        const filters = {
+            product: $('#product-filter').val(),
+            region: $('#region-filter').val()
+        };
+        
+        $.ajax({
+            url: 'filter-data/',
+            type: 'POST',
+            data: JSON.stringify(filters),
+            contentType: 'application/json',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+            success: function(response) {
+                updateCharts(response.graph_data);
+                updateTable(response.table_data);
+            },
+            error: function(xhr) {
+                console.error('Erro:', xhr.responseText);
+            }
+        });
+    }
+    
+    function updateCharts(data) {
+        // Atualiza gráfico de barras (produtos)
+        Plotly.react('products-chart', [{
+            type: 'bar',
+            x: data.products.map(item => item.product),
+            y: data.products.map(item => item.amount),
+            marker: { color: '#4e79a7' }
+        }], {
+            title: 'Vendas por Produto (R$)',
+            margin: { t: 40 }
+        });
+
+        // Atualiza gráfico de pizza (regiões)
+        Plotly.react('regions-chart', [{
+            type: 'pie',
+            labels: data.regions.map(item => item.region),
+            values: data.regions.map(item => item.quantity),
+            textinfo: 'percent',
+            hoverinfo: 'label+value'
+        }], {
+            title: 'Quantidade por Região',
+            margin: { t: 40 }
+        });
+    }
+    
+    function updateTable(data) {
+        if (data.length === 0) {
+            $('#data-table').html('<p>Nenhum dado encontrado com os filtros atuais.</p>');
+            return;
+        }
+
+        let html = '<table><thead><tr>';
+        
+        // Cabeçalho
+        Object.keys(data[0]).forEach(col => {
+            html += `<th>${col.toUpperCase()}</th>`;
+        });
+        
+        html += '</tr></thead><tbody>';
+        
+        // Linhas
+        data.forEach(row => {
+            html += '<tr>';
+            Object.values(row).forEach(val => {
+                html += `<td>${val !== null ? val : ''}</td>`;
+            });
+            html += '</tr>';
+        });
+        
+        html += '</tbody></table>';
+        $('#data-table').html(html);
+    }
+});
+</script>
+{% endblock %}
